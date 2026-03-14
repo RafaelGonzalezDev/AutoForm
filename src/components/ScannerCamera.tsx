@@ -67,7 +67,23 @@ export default function ScannerCamera({ onDone }: ScannerCameraProps) {
             const text = await runTesseract(capturedImage);
             setRawOcrText(text);
 
-            const mapped = mapOcrToFields(text, fields);
+            let mapped;
+            try {
+                // Try AI mapping first
+                const aiRes = await fetch('/api/ai-mapper', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, fields }),
+                });
+                
+                if (!aiRes.ok) throw new Error('AI API Error');
+                mapped = await aiRes.json();
+                console.log('AI Mapping Result:', mapped);
+            } catch (aiErr) {
+                console.warn('AI Mapping failed, falling back to heuristic:', aiErr);
+                mapped = mapOcrToFields(text, fields);
+            }
+
             setScannedData(mapped);
 
             setCameraState('done');

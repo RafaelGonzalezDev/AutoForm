@@ -88,7 +88,23 @@ export default function ScannerUpload({ onDone }: ScannerUploadProps) {
             setProgress(80);
             setRawOcrText(text);
 
-            const mapped = mapOcrToFields(text, fields);
+            let mapped;
+            try {
+                // Try AI mapping
+                const aiRes = await fetch('/api/ai-mapper', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, fields }),
+                });
+
+                if (!aiRes.ok) throw new Error('AI API Error');
+                mapped = await aiRes.json();
+                console.log('AI Mapping Result (Upload):', mapped);
+            } catch (aiErr) {
+                console.warn('AI Mapping failed (Upload), falling back to heuristic:', aiErr);
+                mapped = mapOcrToFields(text, fields);
+            }
+
             setScannedData(mapped);
 
             setProgress(100);
